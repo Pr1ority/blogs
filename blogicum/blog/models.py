@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count
 
 
-
 class PublishableModel(models.Model):
     is_published = models.BooleanField(
         default=True,
@@ -14,9 +13,6 @@ class PublishableModel(models.Model):
 
     class Meta:
         abstract = True
-
-
-
 
 
 class Category(PublishableModel):
@@ -84,20 +80,19 @@ class Post(PublishableModel):
     def __str__(self):
         return self.title
 
-    
+
 class Comment(models.Model):
     text = models.TextField('Текст комментария')
     post = models.ForeignKey(
-        Post, 
+        Post,
         on_delete=models.CASCADE,
         related_name='comments',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
- 
 
     def __str__(self):
         return self.text
 
     class Meta:
-        ordering = ('created_at',) 
+        ordering = ('created_at',)

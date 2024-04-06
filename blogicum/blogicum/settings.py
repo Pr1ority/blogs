@@ -144,7 +144,7 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-CSRF_FAILURE_VIEW = 'pages.views.csrf_failure' 
+CSRF_FAILURE_VIEW = 'pages.views.csrf_failure'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 
