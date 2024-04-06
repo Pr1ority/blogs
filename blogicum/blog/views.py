@@ -60,7 +60,8 @@ def profile(request, username):
     if request.user == profile:
         posts = Post.objects.filter(author=profile)
     else:
-        posts = Post.objects.filter(author=profile, pub_date__lte=timezone.now())
+        posts = Post.objects.filter(author=profile,
+                                    pub_date__lte=timezone.now())
     paginator = Paginator(posts, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -115,6 +116,7 @@ def delete_comment(request, post_id, comment_id):
         comment.delete()
         return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/comment.html', context)
+
 
 @login_required
 def edit_profile(request, username):

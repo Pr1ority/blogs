@@ -15,7 +15,6 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path, reverse_lazy
-from django.conf import settings
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic.edit import CreateView
 
