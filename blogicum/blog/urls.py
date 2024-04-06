@@ -1,4 +1,5 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
 
 from . import views
 
@@ -20,6 +21,7 @@ urlpatterns = [
          views.delete_comment, name='delete_comment'),
     path('profile/<str:username>/edit', views.edit_profile,
          name='edit_profile'),
+    path('login/', auth_views.LoginView.as_view(), name='login'),
 
 
 

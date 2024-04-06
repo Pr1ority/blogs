@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserChangeForm
+from django.urls import reverse_lazy
 
 from blog.models import Post, Category, Comment
 from .forms import PostForm, CommentForm
@@ -25,21 +26,21 @@ def index(request):
     return render(request, 'blog/index.html', context)
 
 
+def select_related(posts):
+    return posts.select_related('author', 'category')
+
+
 def post_detail(request, post_id):
-    template_name = 'blog/detail.html'
-    post = get_object_or_404(Post,
-                             pk=post_id)
-    comments = post.comments.all()
-    if request.method == 'POST':
-        comment_form = CommentForm(request.POST)
-        if comment_form.is_valid:
-            comment_form.save()
-            return redirect('blog:post_detail', post_id=post_id)
-    else:
-        comment_form = CommentForm()
-    context = {'post': post, 'comments': comments,
-               'comment_form': comment_form}
-    return render(request, template_name, context)
+    post = get_object_or_404(Post, pk=post_id)
+    if post.author != request.user:
+        post = get_object_or_404(select_related(
+                                 get_published_posts(Post.objects)),
+                                 pk=post_id)
+    comments = post.comments.order_by('created_at')
+    form = CommentForm()
+    return render(request, 'blog/detail.html', {'post': post,
+                                                'comments': comments,
+                                                'form': form})
 
 
 def category_posts(request, category_slug):
@@ -153,16 +154,12 @@ def create_post(request):
 @login_required
 def edit_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    if request.user != post.author:
-        if request.user.is_authenticated:
-            return redirect('blog:post_detail', post_id=post_id)
-        else:
-            return redirect('login')
-    if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES, instance=post)
-        if form.is_valid():
-            form.save()
-            return redirect('blog:post_detail', post_id=post_id)
-    else:
-        form = PostForm(instance=post)
+    if not request.user.is_authenticated:
+        return redirect(reverse_lazy('login'))
+    if post.author != request.user:
+        return redirect('blog:post_detail', post_id=post_id)
+    form = PostForm(request.POST or None, instance=post)
+    if form.is_valid():
+        form.save()
+        return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/create.html', {'form': form})
