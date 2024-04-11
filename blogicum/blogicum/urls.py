@@ -24,7 +24,6 @@ from django.conf import settings
 if settings.DEBUG:
     import debug_toolbar
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('blog.urls')),
@@ -37,8 +36,14 @@ urlpatterns = [
             form_class=UserCreationForm,
             success_url=reverse_lazy('blog:index'),
         ),
-        name='registration',),
-    path('__debug__/', include(debug_toolbar.urls)),
+        name='registration',
+    ),
+]
+
+if settings.DEBUG:
+    urlpatterns.append(path('__debug__/', include(debug_toolbar.urls)))
+
+urlpatterns += [
     path('login/', auth_views.LoginView.as_view(), name='login'),
 ]
 
