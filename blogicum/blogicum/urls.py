@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import include, path, reverse_lazy
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic.edit import CreateView
+from django.contrib.auth import views as auth_views
 
 
 urlpatterns = [
@@ -32,7 +33,8 @@ urlpatterns = [
             success_url=reverse_lazy('blog:index'),
         ),
         name='registration',),
-
+    path('__debug__/', include('debug_toolbar.urls')),
+    path('login/', auth_views.LoginView.as_view(), name='login'),
 ]
 
 handler404 = 'pages.views.page_not_found'
