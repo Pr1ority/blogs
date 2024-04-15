@@ -4,7 +4,6 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserChangeForm
-from django.urls import reverse_lazy
 
 from blog.models import Post, Category, Comment
 from .forms import PostForm, CommentForm
