@@ -66,15 +66,20 @@ class Post(PublishableModel):
         null=True,
         verbose_name='Категория', related_name='posts')
     image = models.ImageField('Фото', upload_to='posts_images', blank=True)
+    comments_count = models.IntegerField(default=0)
 
     @property
     def comment_count(self):
-        return self.comments.count()
+        return self.comments_count
 
     class Meta:
         verbose_name = 'публикация'
         verbose_name_plural = 'Публикации'
         ordering = ['-pub_date']
+
+    def save(self, *args, **kwargs):
+        self.comments_count = self.comments.count()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
