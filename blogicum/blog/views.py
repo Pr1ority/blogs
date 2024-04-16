@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserChangeForm
+from django.db.models import Count
 
 from blog.models import Post, Category, Comment
 from .forms import PostForm, CommentForm
@@ -18,16 +19,17 @@ def get_paginated_page(request, queryset, per_page):
     return page_obj
 
 
-def get_published_posts(posts):
-    return posts.filter(is_published=True,
-                        pub_date__lte=timezone.now(),
-                        category__is_published=True).select_related('author',
-                                                                    'category')
+def get_published_posts(posts, include_comments=False):
+    queryset = posts.filter(is_published=True, pub_date__lte=timezone.now(),
+                            category__is_published=True).order_by('-pub_date')
+    if include_comments:
+        queryset = queryset.annotate(comment_count=Count('comments'))
+    return queryset.select_related('author', 'category')
 
 
 def index(request):
     posts = Post.objects.all()
-    published_posts = get_published_posts(posts)
+    published_posts = get_published_posts(posts, include_comments=True)
     page_obj = get_paginated_page(request, published_posts, POSTS_PER_PAGE)
     context = {'page_obj': page_obj}
     return render(request, 'blog/index.html', context)
@@ -58,7 +60,8 @@ def category_posts(request, category_slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all(
-    ) if request.user == author else get_published_posts(author.posts.all())
+    ) if request.user == author else get_published_posts(author.posts.all(),
+                                                         include_comments=True)
     page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'author': author, 'page_obj': page_obj}
     return render(request, 'blog/profile.html', context)
@@ -73,8 +76,6 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
-        post.comments_count = post.comments.count()
-        post.save()
     return redirect('blog:post_detail', post_id=post_id)
 
 
@@ -109,9 +110,6 @@ def delete_comment(request, post_id, comment_id):
         return redirect('blog:post_detail', post_id=post_id)
     if request.method == 'POST':
         comment.delete()
-        post = get_object_or_404(Post, pk=post_id)
-        post.comments_count = post.comments.count()
-        post.save()
         return redirect('blog:post_detail', post_id=post_id)
     return render(request, 'blog/comment.html', {'comment': comment})
 
@@ -130,12 +128,12 @@ def edit_profile(request, username):
 @login_required
 def create_post(request):
     form = PostForm(request.POST or None, request.FILES)
-    if form.is_valid():
-        post = form.save(commit=False)
-        post.author = request.user
-        post.save()
-        return redirect('blog:profile', username=request.user.username)
-    return render(request, 'blog/create.html', {'form': form})
+    if not form.is_valid():
+        return render(request, 'blog/create.html', {'form': form})
+    post = form.save(commit=False)
+    post.author = request.user
+    post.save()
+    return redirect('blog:profile', username=request.user.username)
 
 
 @login_required
