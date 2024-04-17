@@ -7,7 +7,7 @@ from django.contrib.auth.forms import UserChangeForm
 from django.db.models import Count
 
 from blog.models import Post, Category, Comment
-from .forms import PostForm, CommentForm
+from blog.forms import PostForm, CommentForm
 
 POSTS_PER_PAGE = 10
 
@@ -20,11 +20,12 @@ def get_paginated_page(request, queryset, per_page):
 
 
 def get_published_posts(posts, include_comments=False):
-    queryset = posts.filter(is_published=True, pub_date__lte=timezone.now(),
-                            category__is_published=True).order_by('-pub_date')
+    published_posts = posts.filter(is_published=True, pub_date__lte=timezone.now(),
+                            category__is_published=True)
     if include_comments:
-        queryset = queryset.annotate(comment_count=Count('comments'))
-    return queryset.select_related('author', 'category')
+        published_posts = published_posts.annotate(comment_count=Count('comments'))
+        published_posts = published_posts.order_by('-pub_date')
+    return published_posts.select_related('author', 'category')
 
 
 def index(request):
@@ -51,18 +52,20 @@ def category_posts(request, category_slug):
     template_name = 'blog/category.html'
     category = get_object_or_404(Category, slug=category_slug,
                                  is_published=True)
-    post_list = get_published_posts(category.posts.all())
-    page_obj = get_paginated_page(request, post_list, POSTS_PER_PAGE)
+    posts = get_published_posts(category.posts.all())
+    page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'category': category, 'page_obj': page_obj}
     return render(request, template_name, context)
 
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    posts = author.posts.all(
-    ) if request.user == author else get_published_posts(author.posts.all(),
-                                                         include_comments=True)
-    page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
+    posts = author.posts.all()
+    if request.user == author:
+        page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
+    else:
+        published_posts = get_published_posts(posts, include_comments=True)
+        page_obj = get_paginated_page(request, published_posts, POSTS_PER_PAGE)
     context = {'author': author, 'page_obj': page_obj}
     return render(request, 'blog/profile.html', context)
 
