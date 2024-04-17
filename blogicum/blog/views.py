@@ -20,10 +20,12 @@ def get_paginated_page(request, queryset, per_page):
 
 
 def get_published_posts(posts, include_comments=False):
-    published_posts = posts.filter(is_published=True, pub_date__lte=timezone.now(),
-                            category__is_published=True)
+    published_posts = posts.filter(is_published=True,
+                                   pub_date__lte=timezone.now(),
+                                   category__is_published=True)
     if include_comments:
-        published_posts = published_posts.annotate(comment_count=Count('comments'))
+        published_posts = published_posts.annotate(
+            comment_count=Count('comments'))
         published_posts = published_posts.order_by('-pub_date')
     return published_posts.select_related('author', 'category')
 
