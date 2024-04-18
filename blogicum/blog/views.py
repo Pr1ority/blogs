@@ -19,7 +19,7 @@ def get_paginated_page(request, queryset, per_page):
     return page_obj
 
 
-def get_published_posts(posts, include_comments=False):
+def get_published_posts(posts, include_comments=True):
     published_posts = posts.filter(is_published=True,
                                    pub_date__lte=timezone.now(),
                                    category__is_published=True)
@@ -32,7 +32,7 @@ def get_published_posts(posts, include_comments=False):
 
 def index(request):
     posts = Post.objects.all()
-    published_posts = get_published_posts(posts, include_comments=True)
+    published_posts = get_published_posts(posts)
     page_obj = get_paginated_page(request, published_posts, POSTS_PER_PAGE)
     context = {'page_obj': page_obj}
     return render(request, 'blog/index.html', context)
@@ -64,10 +64,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
     if request.user == author:
-        page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
+        posts = posts.annotate(comment_count=Count('comments')).order_by(
+            '-pub_date')
     else:
-        published_posts = get_published_posts(posts, include_comments=True)
-        page_obj = get_paginated_page(request, published_posts, POSTS_PER_PAGE)
+        posts = get_published_posts(posts)
+    page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'author': author, 'page_obj': page_obj}
     return render(request, 'blog/profile.html', context)
 
