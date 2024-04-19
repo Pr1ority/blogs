@@ -19,10 +19,12 @@ def get_paginated_page(request, queryset, per_page):
     return page_obj
 
 
-def get_published_posts(posts, include_comments=True):
+def get_published_posts(posts, include_comments=True, skip_filter=False):
     published_posts = posts.filter(is_published=True,
                                    pub_date__lte=timezone.now(),
                                    category__is_published=True)
+    if skip_filter:
+        published_posts = posts.all()
     if include_comments:
         published_posts = published_posts.annotate(
             comment_count=Count('comments'))
@@ -42,7 +44,8 @@ def post_detail(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     if post.author != request.user:
         post = get_object_or_404(
-            (get_published_posts(Post.objects)), pk=post_id)
+            (get_published_posts(Post.objects,
+                                 include_comments=False)), pk=post_id)
     comments = post.comments.all()
     form = CommentForm()
     return render(request, 'blog/detail.html', {'post': post,
@@ -64,10 +67,10 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
     if request.user == author:
-        posts = posts.annotate(comment_count=Count('comments')).order_by(
-            '-pub_date')
+        skip_filter = True
     else:
-        posts = get_published_posts(posts)
+        skip_filter = False
+    posts = get_published_posts(posts, skip_filter=skip_filter)
     page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'author': author, 'page_obj': page_obj}
     return render(request, 'blog/profile.html', context)
