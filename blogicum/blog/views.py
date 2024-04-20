@@ -20,11 +20,12 @@ def get_paginated_page(request, queryset, per_page):
 
 
 def get_published_posts(posts, include_comments=True, skip_filter=False):
-    published_posts = posts.filter(is_published=True,
-                                   pub_date__lte=timezone.now(),
-                                   category__is_published=True)
     if skip_filter:
         published_posts = posts.all()
+    else:
+        published_posts = posts.filter(is_published=True,
+                                       pub_date__lte=timezone.now(),
+                                       category__is_published=True)
     if include_comments:
         published_posts = published_posts.annotate(
             comment_count=Count('comments'))
@@ -66,11 +67,7 @@ def category_posts(request, category_slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
-    if request.user == author:
-        skip_filter = True
-    else:
-        skip_filter = False
-    posts = get_published_posts(posts, skip_filter=skip_filter)
+    posts = get_published_posts(posts, skip_filter=request.user == author)
     page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'author': author, 'page_obj': page_obj}
     return render(request, 'blog/profile.html', context)
