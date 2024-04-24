@@ -20,16 +20,13 @@ def get_paginated_page(request, queryset, per_page):
 
 
 def get_published_posts(posts, include_comments=True, skip_filter=False):
-    if skip_filter:
-        published_posts = posts
-    else:
-        published_posts = posts.filter(is_published=True,
-                                       pub_date__lte=timezone.now(),
-                                       category__is_published=True)
+    if not skip_filter:
+        posts = posts.filter(is_published=True,
+                              pub_date__lte=timezone.now(),
+                              category__is_published=True)
     if include_comments:
-        published_posts = published_posts.annotate(
-            comment_count=Count('comments')).order_by('-pub_date')
-    return published_posts.select_related('author', 'category', 'location')
+        posts = posts.annotate(comment_count=Count('comments')).order_by('-pub_date')
+    return posts.select_related('author', 'category', 'location')
 
 
 def index(request):
@@ -118,13 +115,11 @@ def delete_comment(request, post_id, comment_id):
 
 
 @login_required
-def edit_profile(request, username):
-    if request.user != get_object_or_404(User, username=username):
-        return redirect('blog:profile', username=username)
+def edit_profile(request):
     form = UserChangeForm(request.POST or None, instance=request.user)
     if form.is_valid():
         form.save()
-        return redirect('blog:profile', username=username)
+        return redirect('blog:profile', username=request.user.username)
     return render(request, 'blog/user.html', {'form': form})
 
 
