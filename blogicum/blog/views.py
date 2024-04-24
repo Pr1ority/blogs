@@ -21,16 +21,15 @@ def get_paginated_page(request, queryset, per_page):
 
 def get_published_posts(posts, include_comments=True, skip_filter=False):
     if skip_filter:
-        published_posts = posts.all()
+        published_posts = posts
     else:
         published_posts = posts.filter(is_published=True,
                                        pub_date__lte=timezone.now(),
                                        category__is_published=True)
     if include_comments:
         published_posts = published_posts.annotate(
-            comment_count=Count('comments'))
-        published_posts = published_posts.order_by('-pub_date')
-    return published_posts.select_related('author', 'category')
+            comment_count=Count('comments')).order_by('-pub_date')
+    return published_posts.select_related('author', 'category', 'location')
 
 
 def index(request):
@@ -47,7 +46,7 @@ def post_detail(request, post_id):
         post = get_object_or_404(
             (get_published_posts(Post.objects,
                                  include_comments=False)), pk=post_id)
-    comments = post.comments.all()
+    comments = post.comments.select_related('author').all()
     form = CommentForm()
     return render(request, 'blog/detail.html', {'post': post,
                                                 'comments': comments,
@@ -55,13 +54,12 @@ def post_detail(request, post_id):
 
 
 def category_posts(request, category_slug):
-    template_name = 'blog/category.html'
     category = get_object_or_404(Category, slug=category_slug,
                                  is_published=True)
     posts = get_published_posts(category.posts.all())
     page_obj = get_paginated_page(request, posts, POSTS_PER_PAGE)
     context = {'category': category, 'page_obj': page_obj}
-    return render(request, template_name, context)
+    return render(request, 'blog/category.html', context)
 
 
 def profile(request, username):
@@ -101,10 +99,9 @@ def edit_comment(request, post_id, comment_id):
 @login_required
 def delete_post(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
-    if request.method == 'POST':
-        if request.user == post.author:
-            post.delete()
-            return redirect('blog:index')
+    if request.method == 'POST' and request.user == post.author:
+        post.delete()
+        return redirect('blog:index')
     context = {'post': post}
     return render(request, 'blog/index.html', context)
 
